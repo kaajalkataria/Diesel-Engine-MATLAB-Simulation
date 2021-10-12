@@ -1,0 +1,10 @@
+The reference for the current project is taken from Skill Lync.
+The objectives of the project include:
+- Simulation of p-V diagram of diesel cycle
+- Obtaining thermal efficiency, net work output, and mean effective pressure developed by the engine
+- Understanding the variation trend of efficiency with compression ratio, cut-off ratio, and stroke length
+
+Thermodynamic processes involved:
+- Reversible Adiabatic Process (Isentropic Compression and Expansion)
+- Constant Pressure Process (Isobaric Heat Addition)
+- Constant Volume Process (Isochoric Heat Rejection)
