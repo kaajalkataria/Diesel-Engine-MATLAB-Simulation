@@ -1,0 +1,165 @@
+%DESIGN YOUR IDEAL DIESEL CYCLE
+
+clear all
+close all
+clc
+
+disp('DESIGN YOUR DIESEL CYCLE')
+disp('------------------------')
+disp('ENTER ENGINE PARAMETERS AND PRESS OK')
+
+%EXTRACTING THE ENGINE PARAMETERS
+pause(2);
+inputeng = inputdlg({'Cylinder Bore Diameter (mm)','Cylinder Stroke Length (mm)','No. of cylinders'},'ENGINE PARAMETERS',[1 50;1 50;1 50]);
+
+%CHECKING FOR MISSING INPUT
+for i = 1:3
+    if(isempty(inputeng{i}))
+        err = msgbox('AN EMPTY PARAMETER INPUT FOUND. PLEASE RETRY.','ERROR','error');
+        clc
+        return
+    end
+end
+
+D = str2num(inputeng{1});
+SL = str2num(inputeng{2});
+n = str2num(inputeng{3});
+
+%CALCULATING CC OF ENGINE
+cc1 = ((pi/4)*(D^2)*SL*n)/(1000);
+cc2 = ceil(cc1);
+cc = 100 * (ceil(cc2/100));
+
+clc
+
+if (cc==0)
+    b = msgbox('Engine parameters are not acceptable, kindly retry','ERROR','error');
+    return
+end
+clc
+
+disp('-------------------')
+disp('NOTE: 1 bar = 100000 Pa')
+disp('NOTE: 1 atm = 101325 Pa')
+disp('NOTE: 1 Deg Celcius = 273K')
+disp('-------------------')
+disp('Compression Ratio is the ratio between the start and end volume for the compression phase (Process 1-2)[V1/V2]')
+disp('Cut-off ratio is the ratio between the end and start volume for the combustion phase (Process 2-3)[V3/V2]')
+disp('-------------------')
+disp('ENTER PARAMETERS AND PRESS OK')
+
+pause(2)
+
+%ACCEPTING INITIAL PARAMETERS OF THE CYCLE
+inputcnd = inputdlg({'Atmospheric Pressure (bar):','Initial Temperature (celcius):','Compression Ratio:','Cut Off Ratio:'},'INITIAL PARAMETERS',[1 50;1 50;1 50;1 50])
+
+%CHECKING FOR MISSING INPUT CONDITIONS
+for j = 1:4
+    if (isempty(inputcnd{j}))
+        Err = msgbox('AN EMPTY INPUT FIELD FOUND. PLEASE RETRY.','ERROR','error');
+        return
+    end
+end
+
+p1 = str2num(inputcnd{1});
+if (p1 == 0)
+    perr = msgbox('Initial pressure not acceptable, please retry.','ERROR','error');
+    return
+end
+
+pD1 = p1*100000;
+t1 = str2num(inputcnd{2});
+if (t1 == 0)
+    terr = msgbox('initial temperature not acceptable, please retry.','ERROR','error');
+    return
+end
+
+tD1 = t1 + 273; %CONVERSION TO KELVIN
+
+cr = str2num(inputcnd{3});
+a = str2num(inputcnd{4});
+r = 0.287;
+cv = 0.718;
+cp = cv + r;
+gamma = cp/cv;
+clc
+
+%CHECKING FOR COMPRESSION RATIO VALUES
+if (cr < 14)
+    e = msgbox('Very low compression ratio. Try with values >= 14','ERROR','error');
+    return
+else if (cr > 23)
+        f = msgbox('High compression ratio. Try with values <= 23','ERROR','error');
+        return
+    end
+end
+
+%CHECKING FOR CUT-OFF RATIO VALUE
+if (a == 0)
+    j = msgbox('Minimum value for the cut-off ratio cannot be 0','ERROR','error');
+    return
+end
+clc
+
+%SWEPT VOLUME
+SV = (pi/4)*(D^2/(1000*1000))*(SL/1000);
+
+%CLEARANCE VOLUME
+CV = SV/(cr-1);
+
+%FINDING THE VARIABLE AT DIFFERENT STATES
+%STATE 1
+vD1 = SV + CV;
+
+%STATE 2
+vD2 = CV;
+%Since pv^gamma = constant (adiabatic reversible process)
+pD2 = pD1 * (cr^gamma);
+%Since p1v1/t1 = p2v2/t2
+tD2 = tD1 * (cr^(gamma-1));
+
+%For compression curve from state 1 to state 2
+CMP_volD = linspace (vD1,vD2,100);
+CMP_presD = (((vD1./CMP_volD).^gamma)*pD1);
+
+%STATE 3
+vD3 = a * vD2;
+%Since p3v3/t3 = p2v2/t2
+pD3 = pD2;
+tD3 = tD2 * ((pD3 * vD3)/(pD2 * vD2));
+
+%Thermal Efficiency
+T_EFD = 1 - ((1/(cr^(gamma-1)))*(((a^gamma)-1)/(gamma*(a-1))));
+Tpercent = T_EFD * 100;
+
+%Net Work Output
+R = 287.1;
+mass = pD1*vD1*180/(R*tD1);
+Qa = mass * cp * (tD3-tD2) * 1000;
+Wnet = Qa * T_EFD/1000;
+Qr = mass * cv * (tD4-tD1) * 1000;
+
+%Finding Mean Effective Pressure (MEP)
+MEP = Wnet/(vD1-vD2)/100000;
+
+x = cc;
+y = Tpercent;
+z = cr;
+work = Wnet;
+
+%Displaying the output
+output = msgbox({['Mean Effective Pressure (bar) = ',num2str(MEP)],['Thermal Efficiency (%) = ',num2str(y)],['Net Work Done (kJ) = ',num2str(work)],['Compression Ratio = ',num2str(z)],['Design CC = ',num2str(x)],['Click OK to continue']},'RESULT','help');
+disp('To view p-V diagram press OK')
+uiwait(output);
+clc
+
+%Saving the output as table (.xlsx)
+fnameip1 = inputdlg({'Enter file name for output report as spreadsheet'},'SAVE AS',[1 50]);
+
+str1 = string(fnameip1);
+str2 = '.xlsx';
+file = append(str1,str2);
+
+restable = table({'Design CC';'Thermal Efficiency (%)';'Net Work Done (kJ)';'Mean effective Pressure'},[cc;Tpercent;Wnet;MEP],'Variable Names',{'PARAMETERS','VALUES'});
+
+writetable(restable,file,'sheet',1)
